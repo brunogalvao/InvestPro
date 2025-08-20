@@ -14,4 +14,22 @@ export default defineConfig({
   server: {
     historyApiFallback: true,
   },
+  build: {
+    outDir: 'dist',
+    sourcemap: false,
+    minify: 'terser',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          router: ['react-router-dom'],
+          i18n: ['i18next', 'react-i18next']
+        }
+      }
+    }
+  },
+  preview: {
+    port: 3000,
+    host: true
+  }
 })

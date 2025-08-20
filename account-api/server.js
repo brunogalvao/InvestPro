@@ -19,9 +19,29 @@ await app.register(helmet)
 await app.register(jwt, { secret: JWT_SECRET })
 
 // Database
-const pool = new pg.Pool({ connectionString: DATABASE_URL, max: 5 })
+let pool;
+let isConnected = false;
+
+async function initDatabase() {
+  try {
+    if (DATABASE_URL && DATABASE_URL !== 'postgresql://user:password@localhost:5432/investpro') {
+      pool = new pg.Pool({ connectionString: DATABASE_URL, max: 5 });
+      await migrate();
+      isConnected = true;
+      console.log('✅ Database connected successfully');
+    } else {
+      console.log('⚠️  No valid DATABASE_URL provided, running in demo mode');
+      isConnected = false;
+    }
+  } catch (error) {
+    console.log('⚠️  Database connection failed, running in demo mode:', error.message);
+    isConnected = false;
+  }
+}
 
 async function migrate() {
+  if (!pool) return;
+  
   // Simple schema creation if not exists
   await pool.query(`
     create table if not exists users (
@@ -65,6 +85,13 @@ app.get('/health', async () => ({ status: 'OK', ts: new Date().toISOString() }))
 
 // Auth: register
 app.post('/auth/register', async (req, reply) => {
+  if (!isConnected) {
+    return reply.code(503).send({ 
+      error: 'Service temporarily unavailable', 
+      message: 'Database not connected. Running in demo mode.' 
+    });
+  }
+
   const bodySchema = z.object({
     name: z.string().min(2),
     email: z.string().email().optional().or(z.literal('')).or(z.null()),
@@ -214,7 +241,7 @@ app.delete('/accounts/:id', async (req) => {
 
 // Start
 try {
-  await migrate()
+  await initDatabase();
   await app.listen({ port: PORT, host: '0.0.0.0' })
   app.log.info(`Account API running on ${PORT}`)
 } catch (err) {

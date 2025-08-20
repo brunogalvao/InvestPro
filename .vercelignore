@@ -1,0 +1,41 @@
+# Arquivos desnecessários para produção
+node_modules/
+.git/
+.gitignore
+README.md
+.env*
+docker/
+docker-compose*.yml
+Dockerfile*
+scripts/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Arquivos de desenvolvimento
+src/**/*.test.js
+src/**/*.spec.js
+test/
+tests/
+coverage/
+.nyc_output/
+
+# Arquivos temporários
+tmp/
+temp/
+.cache/
+dist/
+build/
+
+# Arquivos específicos do projeto
+render.yaml
+RENDER-DEPLOY.md
+docker-commands.md
+README-Docker-i18n.md
