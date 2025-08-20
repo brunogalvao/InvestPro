@@ -1,0 +1,19 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Instalar pnpm globalmente
+RUN npm install -g pnpm
+
+# Instalar dependências
+COPY package*.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
+
+# Copiar código da aplicação
+COPY . .
+
+# Expor porta
+EXPOSE 5173
+
+# Comando para desenvolvimento
+CMD ["pnpm", "run", "dev", "--", "--host", "0.0.0.0"]
