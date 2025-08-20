@@ -27,14 +27,6 @@
       "dest": "/account-api/server.js"
     },
     {
-      "src": "/i18n/(.*)",
-      "dest": "/i18n-api/server.js"
-    },
-    {
-      "src": "/accounts/(.*)",
-      "dest": "/account-api/server.js"
-    },
-    {
       "src": "/health",
       "dest": "/i18n-api/server.js"
     },
