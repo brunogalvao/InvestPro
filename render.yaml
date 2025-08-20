@@ -12,12 +12,9 @@ services:
       - key: PORT
         value: 10000
       - key: REDIS_URL
-        fromService:
-          type: redis
-          name: investpro-redis
-          property: connectionString
+        value: redis://localhost:6379
       - key: CORS_ORIGIN
-        value: https://your-frontend-domain.onrender.com
+        value: "*"
 
   # API de Contas
   - type: web
@@ -32,10 +29,7 @@ services:
       - key: PORT
         value: 10000
       - key: DATABASE_URL
-        fromService:
-          type: postgres
-          name: investpro-postgres
-          property: connectionString
+        value: postgresql://user:password@localhost:5432/investpro
       - key: BCRYPT_SALT_ROUNDS
         value: 12
       - key: JWT_SECRET
@@ -43,16 +37,4 @@ services:
       - key: JWT_EXPIRES_IN
         value: 24h
       - key: CORS_ORIGIN
-        value: https://your-frontend-domain.onrender.com
-
-  # Banco de Dados PostgreSQL
-  - type: postgres
-    name: investpro-postgres
-    plan: free
-    ipAllowList: []
-
-  # Redis para cache
-  - type: redis
-    name: investpro-redis
-    plan: free
-    ipAllowList: []
+        value: "*"
