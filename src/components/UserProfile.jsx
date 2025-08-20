@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { User, MapPin, Mail, Phone, CreditCard, FileText, DollarSign, LogOut, Edit, Shield } from 'lucide-react';
+import { EditProfileForm } from './EditProfileForm';
 
 export const UserProfile = ({ token, onLogout }) => {
   const { t } = useTranslation();
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     if (token) {
@@ -41,6 +43,25 @@ export const UserProfile = ({ token, onLogout }) => {
     }
   };
 
+  const handleEdit = () => {
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+  };
+
+  const handleSaveEdit = (updatedData) => {
+    // Atualizar os dados locais com as informações editadas
+    setUserData(prevData => ({
+      ...prevData,
+      ...updatedData,
+      // Converter income de volta para número se necessário
+      income: typeof updatedData.income === 'string' ? parseFloat(updatedData.income) : updatedData.income
+    }));
+    setIsEditing(false);
+  };
+
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -57,6 +78,18 @@ export const UserProfile = ({ token, onLogout }) => {
       minute: '2-digit'
     });
   };
+
+  // Se estiver editando, mostrar o formulário de edição
+  if (isEditing) {
+    return (
+      <EditProfileForm
+        userData={userData}
+        token={token}
+        onSave={handleSaveEdit}
+        onCancel={handleCancelEdit}
+      />
+    );
+  }
 
   if (loading) {
     return (
@@ -115,7 +148,10 @@ export const UserProfile = ({ token, onLogout }) => {
             </p>
           </div>
           <div className="flex gap-3">
-            <button className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 flex items-center gap-2">
+            <button 
+              onClick={handleEdit}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
+            >
               <Edit size={16} />
               Editar
             </button>

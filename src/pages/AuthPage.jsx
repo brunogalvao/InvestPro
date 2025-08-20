@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { AccountForm } from '../components/AccountForm';
 import { LoginForm } from '../components/LoginForm';
 import { UserProfile } from '../components/UserProfile';
-import { CheckCircle, UserPlus, LogIn } from 'lucide-react';
+import { CheckCircle, UserPlus, LogIn, ArrowLeft } from 'lucide-react';
 
 export const AuthPage = () => {
+  const navigate = useNavigate();
   const [currentView, setCurrentView] = useState('login'); // 'login', 'register', 'profile'
   const [token, setToken] = useState(null);
   const [successMessage, setSuccessMessage] = useState('');
@@ -13,15 +15,16 @@ export const AuthPage = () => {
   useEffect(() => {
     const savedToken = localStorage.getItem('investpro_token');
     if (savedToken) {
-      setToken(savedToken);
-      setCurrentView('profile');
+      // Se já estiver logado, redirecionar para o dashboard
+      navigate('/dashboard');
     }
-  }, []);
+  }, [navigate]);
 
   const handleLoginSuccess = (result) => {
     setToken(result.token);
     localStorage.setItem('investpro_token', result.token);
-    setCurrentView('profile');
+    // Redirecionar para o dashboard após login bem-sucedido
+    navigate('/dashboard');
   };
 
   const handleRegisterSuccess = (result) => {
@@ -45,13 +48,25 @@ export const AuthPage = () => {
     setSuccessMessage('');
   };
 
-  // Se já está logado, mostrar o perfil
-  if (currentView === 'profile' && token) {
-    return <UserProfile token={token} onLogout={handleLogout} />;
+  // Se já está logado, redirecionar para dashboard
+  if (token) {
+    navigate('/dashboard');
+    return null;
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-12">
+      {/* Botão voltar */}
+      <div className="max-w-4xl mx-auto px-4">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors mb-6"
+        >
+          <ArrowLeft size={20} />
+          Voltar ao Dashboard
+        </Link>
+      </div>
+      
       {/* Header */}
       <div className="text-center mb-8">
         <div className="flex justify-center mb-4">

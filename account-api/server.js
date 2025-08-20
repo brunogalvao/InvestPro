@@ -67,11 +67,17 @@ app.get('/health', async () => ({ status: 'OK', ts: new Date().toISOString() }))
 app.post('/auth/register', async (req, reply) => {
   const bodySchema = z.object({
     name: z.string().min(2),
-    email: z.string().email().optional(),
-    phone: z.string().min(8).optional(),
+    email: z.string().email().optional().or(z.literal('')).or(z.null()),
+    phone: z.string().min(8).optional().or(z.literal('')).or(z.null()),
     cpf: z.string().min(11).max(14),
     rg: z.string().min(5),
-    income: z.number().nonnegative(),
+    income: z.string().min(1).transform((val) => {
+      // Remove caracteres não numéricos exceto vírgula e ponto
+      const cleanIncome = val.replace(/[^\d,.]/g, '');
+      // Converte vírgula para ponto
+      const normalizedIncome = cleanIncome.replace(',', '.');
+      return parseFloat(normalizedIncome);
+    }),
     password: z.string().min(6),
     address: z.object({
       street: z.string(),
@@ -103,8 +109,8 @@ app.post('/auth/register', async (req, reply) => {
 // Auth: login (email ou phone)
 app.post('/auth/login', async (req, reply) => {
   const bodySchema = z.object({
-    email: z.string().email().optional(),
-    phone: z.string().optional(),
+    email: z.string().email().optional().or(z.literal('')).or(z.null()),
+    phone: z.string().optional().or(z.literal('')).or(z.null()),
     password: z.string().min(6)
   }).refine(d => d.email || d.phone, { message: 'email ou phone é obrigatório' })
 
@@ -157,7 +163,14 @@ app.put('/accounts/:id', async (req, reply) => {
     name: z.string().min(2).optional(),
     cpf: z.string().min(11).max(14).optional(),
     rg: z.string().min(5).optional(),
-    income: z.number().nonnegative().optional(),
+    income: z.string().min(1).optional().transform((val) => {
+      if (!val) return undefined;
+      // Remove caracteres não numéricos exceto vírgula e ponto
+      const cleanIncome = val.replace(/[^\d,.]/g, '');
+      // Converte vírgula para ponto
+      const normalizedIncome = cleanIncome.replace(',', '.');
+      return parseFloat(normalizedIncome);
+    }),
     address: z.object({
       street: z.string(),
       cep: z.string(),

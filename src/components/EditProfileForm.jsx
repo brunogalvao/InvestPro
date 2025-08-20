@@ -1,40 +1,35 @@
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
-import { User, MapPin, Lock, Mail, Phone, CreditCard, FileText, DollarSign } from 'lucide-react';
+import { User, MapPin, Mail, Phone, CreditCard, FileText, DollarSign, X, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MaskedInput } from '@/components/ui/masked-input';
-import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { registerSchema } from '@/schemas';
+import { editProfileSchema } from '@/schemas';
 
-export const AccountForm = ({ onSuccess, onSwitchToLogin }) => {
-  const { t } = useTranslation();
+export const EditProfileForm = ({ userData, token, onSave, onCancel }) => {
   const [loading, setLoading] = useState(false);
 
   const form = useForm({
-    resolver: zodResolver(registerSchema),
+    resolver: zodResolver(editProfileSchema),
     defaultValues: {
-      name: '',
-      email: '',
-      phone: '',
-      cpf: '',
-      rg: '',
-      income: '',
-      password: '',
-      confirmPassword: '',
+      name: userData?.name || '',
+      email: userData?.email || '',
+      phone: userData?.phone || '',
+      cpf: userData?.cpf || '',
+      rg: userData?.rg || '',
+      income: userData?.income ? userData.income.toString() : '',
       address: {
-        street: '',
-        cep: '',
-        city: '',
-        state: ''
+        street: userData?.address?.street || '',
+        cep: userData?.address?.cep || '',
+        city: userData?.address?.city || '',
+        state: userData?.address?.state || ''
       }
     },
-    mode: 'onBlur' // Validação ao perder o foco
+    mode: 'onBlur'
   });
 
   const onSubmit = async (data) => {
@@ -42,10 +37,16 @@ export const AccountForm = ({ onSuccess, onSwitchToLogin }) => {
     
     try {
       const API_BASE_URL = import.meta.env.VITE_I18N_API_URL || 'http://localhost:3000';
-      const response = await fetch(`${API_BASE_URL.replace('3000', '4000')}/auth/register`, {
-        method: 'POST',
+      
+      // Decodificar o token para pegar o user ID
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const userId = payload.sub;
+
+      const response = await fetch(`${API_BASE_URL.replace('3000', '4000')}/accounts/${userId}`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           name: data.name,
@@ -53,19 +54,17 @@ export const AccountForm = ({ onSuccess, onSwitchToLogin }) => {
           phone: data.phone || null,
           cpf: data.cpf,
           rg: data.rg,
-          income: parseFloat(data.income),
-          password: data.password,
+          income: data.income, // Enviar como string, a API vai converter
           address: data.address
         }),
       });
 
       if (response.ok) {
-        const result = await response.json();
-        toast.success('Conta criada com sucesso!');
-        onSuccess(result);
+        toast.success('Perfil atualizado com sucesso!');
+        onSave(data);
       } else {
         const errorData = await response.json();
-        toast.error(errorData.message || 'Erro ao criar conta');
+        toast.error(errorData.message || 'Erro ao atualizar perfil');
       }
     } catch (err) {
       toast.error('Erro de conexão. Tente novamente.');
@@ -74,31 +73,19 @@ export const AccountForm = ({ onSuccess, onSwitchToLogin }) => {
     }
   };
 
-  // Função para mostrar erros de validação
-  const showValidationErrors = () => {
-    const errors = form.formState.errors;
-    if (Object.keys(errors).length > 0) {
-      // Mostra o primeiro erro encontrado
-      const firstError = Object.values(errors)[0];
-      if (firstError?.message) {
-        toast.error(firstError.message);
-      }
-    }
-  };
-
   return (
     <div className="max-w-2xl mx-auto p-6">
       <Card className="shadow-xl">
         <CardHeader className="text-center">
-          <CardTitle className="text-3xl">Abrir Conta</CardTitle>
+          <CardTitle className="text-3xl">Editar Perfil</CardTitle>
           <CardDescription className="text-lg">
-            Preencha seus dados para criar sua conta na InvestPro
+            Atualize suas informações pessoais
           </CardDescription>
         </CardHeader>
         
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit, showValidationErrors)} className="space-y-6">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               {/* Dados Pessoais */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
@@ -304,74 +291,27 @@ export const AccountForm = ({ onSuccess, onSwitchToLogin }) => {
                 </div>
               </div>
 
-              {/* Senha */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                  <Lock size={20} className="text-blue-600" />
-                  Segurança
-                </h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="password"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Senha *</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="password" 
-                            placeholder="Mínimo 6 caracteres" 
-                            {...field} 
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="confirmPassword"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Confirmar Senha *</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="password" 
-                            placeholder="Confirme sua senha" 
-                            {...field} 
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </div>
-
               {/* Botões */}
-              <div className="space-y-4">
+              <div className="flex gap-4">
                 <Button 
-                  type="submit" 
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 text-lg font-semibold"
+                  type="button"
+                  variant="outline"
+                  onClick={onCancel}
+                  className="flex-1"
                   disabled={loading}
                 >
-                  {loading ? 'Criando conta...' : 'Criar Conta'}
+                  <X size={16} />
+                  Cancelar
                 </Button>
                 
-                <div className="text-center">
-                  <p className="text-gray-600">
-                    Já tem uma conta?{' '}
-                    <button
-                      type="button"
-                      onClick={onSwitchToLogin}
-                      className="text-blue-600 hover:text-blue-700 font-semibold underline"
-                    >
-                      Faça login
-                    </button>
-                  </p>
-                </div>
+                <Button 
+                  type="submit" 
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                  disabled={loading}
+                >
+                  <Save size={16} />
+                  {loading ? 'Salvando...' : 'Salvar Alterações'}
+                </Button>
               </div>
             </form>
           </Form>
