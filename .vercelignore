@@ -31,11 +31,14 @@ coverage/
 tmp/
 temp/
 .cache/
-dist/
-build/
 
 # Arquivos específicos do projeto
 render.yaml
 RENDER-DEPLOY.md
 docker-commands.md
 README-Docker-i18n.md
+VERCEL-DEPLOY.md
+
+# Arquivos de build locais
+dist/
+build/

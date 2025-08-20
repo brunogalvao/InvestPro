@@ -10,17 +10,11 @@
     },
     {
       "src": "i18n-api/server.js",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": ["i18n-api/**"]
-      }
+      "use": "@vercel/node"
     },
     {
       "src": "account-api/server.js",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": ["account-api/**"]
-      }
+      "use": "@vercel/node"
     }
   ],
   "routes": [
@@ -48,15 +42,5 @@
       "src": "/(.*)",
       "dest": "/index.html"
     }
-  ],
-  "functions": {
-    "i18n-api/server.js": {
-      "maxDuration": 30
-    },
-    "account-api/server.js": {
-      "maxDuration": 30
-    }
-  },
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist"
+  ]
 }
