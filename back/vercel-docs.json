@@ -1,0 +1,32 @@
+{
+  "version": 2,
+  "name": "investpro-docs",
+  "builds": [
+    {
+      "src": "docs-server.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/",
+      "dest": "/docs-server.js"
+    },
+    {
+      "src": "/docs/(.*)",
+      "dest": "/docs-server.js"
+    },
+    {
+      "src": "/download/(.*)",
+      "dest": "/docs-server.js"
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  },
+  "functions": {
+    "docs-server.js": {
+      "maxDuration": 30
+    }
+  }
+}

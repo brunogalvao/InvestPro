@@ -12,7 +12,9 @@
     "redis": "^4.6.7",
     "cors": "^2.8.5",
     "helmet": "^7.0.0",
-    "node-fetch": "^2.7.0"
+    "node-fetch": "^2.7.0",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"

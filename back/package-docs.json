@@ -1,0 +1,29 @@
+{
+  "name": "investpro-docs",
+  "version": "1.0.0",
+  "description": "Servidor de documentação para as APIs InvestPro",
+  "main": "docs-server.js",
+  "scripts": {
+    "start": "node docs-server.js",
+    "dev": "node docs-server.js",
+    "build": "echo 'No build step required'",
+    "vercel-build": "echo 'No build step required'"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "swagger",
+    "api",
+    "documentation",
+    "investpro",
+    "vercel"
+  ],
+  "author": "InvestPro Team",
+  "license": "MIT"
+}

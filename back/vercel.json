@@ -12,11 +12,11 @@
   ],
   "routes": [
     {
-      "src": "/api/accounts/(.*)",
+      "src": "/accounts(.*)",
       "dest": "/account-api/server.js"
     },
     {
-      "src": "/api/auth/(.*)",
+      "src": "/auth(.*)",
       "dest": "/account-api/server.js"
     },
     {
