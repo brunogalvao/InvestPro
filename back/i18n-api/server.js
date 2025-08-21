@@ -21,11 +21,13 @@ if (process.env.KV_URL) {
   redisClient = Redis.createClient({
     url: process.env.KV_URL
   });
+  console.log('✅ Connected to Vercel KV');
 } else if (process.env.REDIS_URL) {
   // Redis externo
   redisClient = Redis.createClient({
     url: process.env.REDIS_URL
   });
+  console.log('✅ Connected to external Redis');
 } else {
   // Modo demo sem Redis
   redisClient = null;

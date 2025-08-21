@@ -24,20 +24,24 @@ let isConnected = false;
 
 async function initDatabase() {
   try {
-    // Priorizar Vercel Postgres, depois PostgreSQL externo
-    const databaseUrl = process.env.POSTGRES_URL || process.env.DATABASE_URL;
+    // Priorizar Vercel Postgres
+    const databaseUrl = process.env.DATABASE_URL;
     
-    if (databaseUrl && databaseUrl !== 'postgresql://user:password@localhost:5432/investpro') {
-      pool = new pg.Pool({ connectionString: databaseUrl, max: 5 });
+    if (databaseUrl) {
+      pool = new pg.Pool({ 
+        connectionString: databaseUrl, 
+        max: 5,
+        ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+      });
       await migrate();
       isConnected = true;
       console.log('✅ Database connected successfully');
     } else {
-      console.log('⚠️  No valid database URL provided, running in demo mode');
+      console.log('⚠️  No database URL provided');
       isConnected = false;
     }
   } catch (error) {
-    console.log('⚠️  Database connection failed, running in demo mode:', error.message);
+    console.log('⚠️  Database connection failed:', error.message);
     isConnected = false;
   }
 }
