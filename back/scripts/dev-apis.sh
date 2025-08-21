@@ -5,6 +5,17 @@
 
 set -e
 
+# Carregar variáveis de ambiente
+if [ -f ".env" ]; then
+    echo "📋 Carregando variáveis de ambiente do .env"
+    export $(cat .env | grep -v '^#' | xargs)
+elif [ -f "env.local" ]; then
+    echo "📋 Carregando variáveis de ambiente do env.local"
+    export $(cat env.local | grep -v '^#' | xargs)
+else
+    echo "⚠️  Nenhum arquivo .env encontrado"
+fi
+
 echo "🚀 Iniciando desenvolvimento das APIs backend..."
 
 # Verificar se estamos no diretório correto
