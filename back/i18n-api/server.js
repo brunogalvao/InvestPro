@@ -10,33 +10,72 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
-app.use(helmet());
-app.use(cors());
-app.use(express.json());
+app.use(helmet({
+  crossOriginEmbedderPolicy: false,
+  contentSecurityPolicy: false
+}));
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || true,
+  credentials: true
+}));
+app.use(express.json({ limit: '10mb' }));
 
 // Conectar ao Redis (Vercel KV ou Redis externo)
 let redisClient;
-if (process.env.KV_URL) {
-  // Vercel KV
-  redisClient = Redis.createClient({
-    url: process.env.KV_URL
-  });
-  console.log('✅ Connected to Vercel KV');
-} else if (process.env.REDIS_URL) {
-  // Redis externo
-  redisClient = Redis.createClient({
-    url: process.env.REDIS_URL
-  });
-  console.log('✅ Connected to external Redis');
-} else {
-  // Modo demo sem Redis
-  redisClient = null;
-  console.log('⚠️  No Redis connection, running in demo mode');
-}
+let isRedisConnected = false;
 
-if (redisClient) {
-  redisClient.on('error', (err) => console.log('Redis Client Error', err));
-  redisClient.on('connect', () => console.log('Connected to Redis'));
+async function initRedis() {
+  try {
+    if (process.env.KV_URL) {
+      // Vercel KV
+      redisClient = Redis.createClient({
+        url: process.env.KV_URL,
+        socket: {
+          tls: true,
+          rejectUnauthorized: false
+        }
+      });
+      console.log('✅ Connected to Vercel KV');
+    } else if (process.env.REDIS_URL) {
+      // Redis externo
+      redisClient = Redis.createClient({
+        url: process.env.REDIS_URL,
+        socket: {
+          tls: process.env.REDIS_TLS === 'true',
+          rejectUnauthorized: false
+        }
+      });
+      console.log('✅ Connected to external Redis');
+    } else {
+      // Modo demo sem Redis
+      redisClient = null;
+      console.log('⚠️  No Redis connection, running in demo mode');
+      return;
+    }
+
+    if (redisClient) {
+      redisClient.on('error', (err) => {
+        console.log('Redis Client Error:', err);
+        isRedisConnected = false;
+      });
+      
+      redisClient.on('connect', () => {
+        console.log('Connected to Redis');
+        isRedisConnected = true;
+      });
+      
+      redisClient.on('ready', () => {
+        console.log('Redis ready');
+        isRedisConnected = true;
+      });
+
+      await redisClient.connect();
+      await initializeTranslations();
+    }
+  } catch (error) {
+    console.error('❌ Redis connection failed:', error);
+    isRedisConnected = false;
+  }
 }
 
 // Inicializar traduções padrão
@@ -134,13 +173,11 @@ const defaultTranslations = {
 // Inicializar Redis com traduções padrão
 async function initializeTranslations() {
   try {
-    if (!redisClient) {
+    if (!redisClient || !isRedisConnected) {
       console.log('⚠️  Redis não configurado, pulando inicialização de traduções padrão.');
       return;
     }
 
-    await redisClient.connect();
-    
     // Verificar se já existem traduções
     const hasTranslations = await redisClient.exists('i18n:en');
     
@@ -152,20 +189,34 @@ async function initializeTranslations() {
         await redisClient.set(`i18n:${lang}`, JSON.stringify(translations));
       }
       
-      console.log('Traduções inicializadas com sucesso!');
+      console.log('✅ Traduções inicializadas com sucesso!');
+    } else {
+      console.log('✅ Traduções já existem no Redis');
     }
   } catch (error) {
-    console.error('Erro ao inicializar traduções:', error);
+    console.error('❌ Erro ao inicializar traduções:', error);
   }
 }
+
+// Middleware de tratamento de erros
+app.use((err, req, res, next) => {
+  console.error('❌ Unhandled error:', err);
+  res.status(500).json({ 
+    error: 'Internal server error',
+    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
+  });
+});
 
 // Rotas da API
 
 // GET - Obter traduções de um idioma
 app.get('/api/translations/:lang', async (req, res) => {
   try {
-    if (!redisClient) {
-      return res.status(503).json({ error: 'Serviço de traduções indisponível' });
+    if (!redisClient || !isRedisConnected) {
+      return res.status(503).json({ 
+        error: 'Serviço de traduções indisponível',
+        message: 'Redis não está conectado'
+      });
     }
 
     const { lang } = req.params;
@@ -177,6 +228,7 @@ app.get('/api/translations/:lang', async (req, res) => {
     
     res.json(JSON.parse(translations));
   } catch (error) {
+    console.error('❌ Erro ao buscar traduções:', error);
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
@@ -184,17 +236,25 @@ app.get('/api/translations/:lang', async (req, res) => {
 // PUT - Atualizar traduções de um idioma
 app.put('/api/translations/:lang', async (req, res) => {
   try {
-    if (!redisClient) {
-      return res.status(503).json({ error: 'Serviço de traduções indisponível' });
+    if (!redisClient || !isRedisConnected) {
+      return res.status(503).json({ 
+        error: 'Serviço de traduções indisponível',
+        message: 'Redis não está conectado'
+      });
     }
 
     const { lang } = req.params;
     const translations = req.body;
     
+    if (!translations || typeof translations !== 'object') {
+      return res.status(400).json({ error: 'Traduções inválidas' });
+    }
+    
     await redisClient.set(`i18n:${lang}`, JSON.stringify(translations));
     
     res.json({ message: 'Traduções atualizadas com sucesso' });
   } catch (error) {
+    console.error('❌ Erro ao atualizar traduções:', error);
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
@@ -202,13 +262,16 @@ app.put('/api/translations/:lang', async (req, res) => {
 // POST - Adicionar novo idioma
 app.post('/api/translations', async (req, res) => {
   try {
-    if (!redisClient) {
-      return res.status(503).json({ error: 'Serviço de traduções indisponível' });
+    if (!redisClient || !isRedisConnected) {
+      return res.status(503).json({ 
+        error: 'Serviço de traduções indisponível',
+        message: 'Redis não está conectado'
+      });
     }
 
     const { lang, translations } = req.body;
     
-    if (!lang || !translations) {
+    if (!lang || !translations || typeof translations !== 'object') {
       return res.status(400).json({ error: 'Idioma e traduções são obrigatórios' });
     }
     
@@ -216,6 +279,7 @@ app.post('/api/translations', async (req, res) => {
     
     res.status(201).json({ message: 'Idioma adicionado com sucesso' });
   } catch (error) {
+    console.error('❌ Erro ao adicionar idioma:', error);
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
@@ -223,8 +287,11 @@ app.post('/api/translations', async (req, res) => {
 // DELETE - Remover idioma
 app.delete('/api/translations/:lang', async (req, res) => {
   try {
-    if (!redisClient) {
-      return res.status(503).json({ error: 'Serviço de traduções indisponível' });
+    if (!redisClient || !isRedisConnected) {
+      return res.status(503).json({ 
+        error: 'Serviço de traduções indisponível',
+        message: 'Redis não está conectado'
+      });
     }
 
     const { lang } = req.params;
@@ -233,6 +300,7 @@ app.delete('/api/translations/:lang', async (req, res) => {
     
     res.json({ message: 'Idioma removido com sucesso' });
   } catch (error) {
+    console.error('❌ Erro ao remover idioma:', error);
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
@@ -240,8 +308,11 @@ app.delete('/api/translations/:lang', async (req, res) => {
 // GET - Listar idiomas disponíveis
 app.get('/api/languages', async (req, res) => {
   try {
-    if (!redisClient) {
-      return res.status(503).json({ error: 'Serviço de traduções indisponível' });
+    if (!redisClient || !isRedisConnected) {
+      return res.status(503).json({ 
+        error: 'Serviço de traduções indisponível',
+        message: 'Redis não está conectado'
+      });
     }
 
     const keys = await redisClient.keys('i18n:*');
@@ -249,13 +320,19 @@ app.get('/api/languages', async (req, res) => {
     
     res.json(languages);
   } catch (error) {
+    console.error('❌ Erro ao listar idiomas:', error);
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
 
 // Health check
 app.get('/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+  res.json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    redis: isRedisConnected ? 'connected' : 'disconnected',
+    environment: process.env.NODE_ENV || 'development'
+  });
 });
 
 // Rota para cotação do dólar
@@ -285,7 +362,7 @@ app.get('/api/exchange-rate', async (req, res) => {
     
     res.json(exchangeData);
   } catch (error) {
-    console.error('Erro ao buscar cotação:', error);
+    console.error('❌ Erro ao buscar cotação:', error);
     res.status(500).json({ 
       error: 'Erro interno do servidor',
       message: error.message 
@@ -296,8 +373,11 @@ app.get('/api/exchange-rate', async (req, res) => {
 // Rota para buscar cotação com cache Redis
 app.get('/api/exchange-rate/cached', async (req, res) => {
   try {
-    if (!redisClient) {
-      return res.status(503).json({ error: 'Serviço de traduções indisponível' });
+    if (!redisClient || !isRedisConnected) {
+      return res.status(503).json({ 
+        error: 'Serviço de traduções indisponível',
+        message: 'Redis não está conectado'
+      });
     }
 
     // Verificar se existe no cache
@@ -352,7 +432,7 @@ app.get('/api/exchange-rate/cached', async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Erro ao buscar cotação:', error);
+    console.error('❌ Erro ao buscar cotação:', error);
     res.status(500).json({ 
       error: 'Erro interno do servidor',
       message: error.message 
@@ -361,10 +441,20 @@ app.get('/api/exchange-rate/cached', async (req, res) => {
 });
 
 // Inicializar e iniciar servidor
-initializeTranslations().then(() => {
-  app.listen(PORT, () => {
-    console.log(`🚀 i18n API rodando na porta ${PORT}`);
-    console.log(`📚 Idiomas disponíveis: en, pt`);
-    console.log(`🔗 Health check: http://localhost:${PORT}/health`);
-  });
-});
+async function start() {
+  try {
+    await initRedis();
+    
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`🚀 i18n API rodando na porta ${PORT}`);
+      console.log(`📚 Idiomas disponíveis: en, pt`);
+      console.log(`🔗 Health check: http://localhost:${PORT}/health`);
+      console.log(`🌍 Redis status: ${isRedisConnected ? 'connected' : 'disconnected'}`);
+    });
+  } catch (error) {
+    console.error('❌ Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+start()

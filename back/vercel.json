@@ -16,12 +16,35 @@
       "dest": "/account-api/server.js"
     },
     {
+      "src": "/api/auth/(.*)",
+      "dest": "/account-api/server.js"
+    },
+    {
       "src": "/api/i18n/(.*)",
+      "dest": "/i18n-api/server.js"
+    },
+    {
+      "src": "/api/translations/(.*)",
+      "dest": "/i18n-api/server.js"
+    },
+    {
+      "src": "/api/languages",
+      "dest": "/i18n-api/server.js"
+    },
+    {
+      "src": "/api/exchange-rate(.*)",
       "dest": "/i18n-api/server.js"
     },
     {
       "src": "/health",
       "dest": "/i18n-api/server.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/i18n-api/server.js"
     }
-  ]
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  }
 }
