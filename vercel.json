@@ -23,13 +23,5 @@
       "src": "/health",
       "dest": "/i18n-api/server.js"
     }
-  ],
-  "functions": {
-    "account-api/server.js": {
-      "maxDuration": 30
-    },
-    "i18n-api/server.js": {
-      "maxDuration": 30
-    }
-  }
+  ]
 }
