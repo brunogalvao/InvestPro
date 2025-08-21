@@ -4,31 +4,35 @@ services:
   # Banco de dados Postgres
   postgres:
     image: postgres:16-alpine
-    container_name: investpro-postgres
+    container_name: investpro-postgres-prod
     environment:
-      - POSTGRES_USER=investpro
-      - POSTGRES_PASSWORD=investpro
-      - POSTGRES_DB=investpro
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
+    networks:
+      - investpro-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U investpro -d investpro"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # Redis para cache das traduções
   redis:
     image: redis:7-alpine
-    container_name: investpro-redis
+    container_name: investpro-redis-prod
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
     restart: unless-stopped
+    networks:
+      - investpro-network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 30s
@@ -38,20 +42,22 @@ services:
   # API de traduções i18n
   i18n-api:
     build:
-      context: ./back/i18n-api
+      context: ./i18n-api
       dockerfile: Dockerfile
-    container_name: investpro-i18n-api
+    container_name: investpro-i18n-api-prod
     ports:
       - "3000:3000"
     environment:
-      - NODE_ENV=development
+      - NODE_ENV=production
       - REDIS_URL=redis://redis:6379
       - PORT=3000
-      - CORS_ORIGIN=http://localhost:5173
+      - CORS_ORIGIN=${CORS_ORIGIN}
     depends_on:
       redis:
         condition: service_healthy
     restart: unless-stopped
+    networks:
+      - investpro-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
       interval: 30s
@@ -61,47 +67,30 @@ services:
   # API de contas (CRUD + Auth)
   account-api:
     build:
-      context: ./back/account-api
+      context: ./account-api
       dockerfile: Dockerfile
-    container_name: investpro-account-api
+    container_name: investpro-account-api-prod
     ports:
       - "4000:4000"
     environment:
-      - NODE_ENV=development
+      - NODE_ENV=production
       - PORT=4000
-      - DATABASE_URL=postgres://investpro:investpro@postgres:5432/investpro
-      - BCRYPT_SALT_ROUNDS=10
-      - CORS_ORIGIN=http://localhost:5173
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - BCRYPT_SALT_ROUNDS=${BCRYPT_SALT_ROUNDS:-10}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-24h}
+      - CORS_ORIGIN=${CORS_ORIGIN}
     depends_on:
       postgres:
         condition: service_healthy
     restart: unless-stopped
+    networks:
+      - investpro-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-
-  # Frontend React
-  frontend:
-    build:
-      context: ./front
-      dockerfile: Dockerfile.frontend
-    container_name: investpro-frontend
-    ports:
-      - "5173:5173"
-    environment:
-      - VITE_I18N_API_URL=http://localhost:3000
-      - VITE_ACCOUNT_API_URL=http://localhost:4000
-    depends_on:
-      i18n-api:
-        condition: service_healthy
-      account-api:
-        condition: service_healthy
-    volumes:
-      - ./front:/app
-      - /app/node_modules
-    restart: unless-stopped
 
 volumes:
   redis_data:
@@ -110,5 +99,5 @@ volumes:
     driver: local
 
 networks:
-  default:
-    name: investpro-network
+  investpro-network:
+    driver: bridge
