@@ -7,40 +7,12 @@
       "config": {
         "distDir": "dist"
       }
-    },
-    {
-      "src": "i18n-api/server.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "account-api/server.js",
-      "use": "@vercel/node"
     }
   ],
   "routes": [
     {
-      "src": "/api/i18n/(.*)",
-      "dest": "/i18n-api/server.js"
-    },
-    {
-      "src": "/api/accounts/(.*)",
-      "dest": "/account-api/server.js"
-    },
-    {
-      "src": "/health",
-      "dest": "/i18n-api/server.js"
-    },
-    {
       "src": "/(.*)",
       "dest": "/index.html"
     }
-  ],
-  "functions": {
-    "i18n-api/server.js": {
-      "maxDuration": 30
-    },
-    "account-api/server.js": {
-      "maxDuration": 30
-    }
-  }
+  ]
 }

@@ -2,33 +2,33 @@
   "version": 2,
   "builds": [
     {
-      "src": "back/account-api/server.js",
+      "src": "account-api/server.js",
       "use": "@vercel/node"
     },
     {
-      "src": "back/i18n-api/server.js",
+      "src": "i18n-api/server.js",
       "use": "@vercel/node"
     }
   ],
   "routes": [
     {
       "src": "/api/accounts/(.*)",
-      "dest": "/back/account-api/server.js"
+      "dest": "/account-api/server.js"
     },
     {
       "src": "/api/i18n/(.*)",
-      "dest": "/back/i18n-api/server.js"
+      "dest": "/i18n-api/server.js"
     },
     {
       "src": "/health",
-      "dest": "/back/i18n-api/server.js"
+      "dest": "/i18n-api/server.js"
     }
   ],
   "functions": {
-    "back/account-api/server.js": {
+    "account-api/server.js": {
       "maxDuration": 30
     },
-    "back/i18n-api/server.js": {
+    "i18n-api/server.js": {
       "maxDuration": 30
     }
   }
